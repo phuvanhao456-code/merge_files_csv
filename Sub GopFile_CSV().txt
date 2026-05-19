@@ -1,0 +1,88 @@
+Sub GopFile_CSV()
+    Dim sFolder As String
+    Dim sFile As String
+    Dim wsDich As Worksheet
+    Dim dongCuoiDich As Long
+    Dim laSoFile As Boolean
+    Dim demFile As Long
+    Dim fileNo As Integer
+    Dim dongText As String
+    Dim arrData() As String
+    Dim i As Long, j As Integer
+    Dim dongGhi As Long
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "Select folder containing CSV files to merge"
+        If .Show = False Then Exit Sub
+        sFolder = .SelectedItems(1) & "\"
+    End With
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim wbTong As Workbook
+    Set wbTong = Workbooks.Add
+    Set wsDich = wbTong.Sheets(1)
+    wsDich.Name = "Result"
+    laSoFile = True
+    demFile = 0
+    dongGhi = 1
+    sFile = Dir(sFolder & "*.csv")
+    Do While sFile <> ""
+        fileNo = FreeFile
+        Open sFolder & sFile For Input As #fileNo
+        Dim laDongDau As Boolean
+        laDongDau = True
+        Do While Not EOF(fileNo)
+            Line Input #fileNo, dongText
+            If Not laSoFile And laDongDau Then
+                laDongDau = False
+                GoTo TiepTuc
+            End If
+            laDongDau = False
+            Dim ketQua() As String
+            ketQua = ParseCSVLine(dongText)
+            For j = 0 To UBound(ketQua)
+                wsDich.Cells(dongGhi, j + 1).Value = ketQua(j)
+            Next j
+            dongGhi = dongGhi + 1
+TiepTuc:
+        Loop
+        Close #fileNo
+        laSoFile = False
+        demFile = demFile + 1
+        sFile = Dir()
+    Loop
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    If demFile = 0 Then
+        MsgBox "No CSV files found in the selected folder!", vbExclamation
+    Else
+        MsgBox "DONE!" & vbCrLf & "Total files merged: " & demFile & " file(s)", vbInformation
+    End If
+End Sub
+
+Function ParseCSVLine(dongText As String) As String()
+    Dim ketQua() As String
+    Dim soCol As Integer
+    Dim i As Long
+    Dim trongNgoac As Boolean
+    Dim truong As String
+    Dim kyTu As String
+    ReDim ketQua(0)
+    soCol = 0
+    trongNgoac = False
+    truong = ""
+    For i = 1 To Len(dongText)
+        kyTu = Mid(dongText, i, 1)
+        If kyTu = Chr(34) Then
+            trongNgoac = Not trongNgoac
+        ElseIf kyTu = "," And Not trongNgoac Then
+            ketQua(soCol) = truong
+            soCol = soCol + 1
+            ReDim Preserve ketQua(soCol)
+            truong = ""
+        Else
+            truong = truong & kyTu
+        End If
+    Next i
+    ketQua(soCol) = truong
+    ParseCSVLine = ketQua
+End Function
